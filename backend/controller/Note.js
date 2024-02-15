@@ -1,90 +1,64 @@
 import Note from "../model/Note.js";
+import CustomError from "../utils/CustomError.js";
+import asyncHandler from "express-async-handler";
 
-const createNote = async (req, res) => {
-  try {
-    const uid = req.user.id;
-    const { title, description } = req.body;
+const createNote = asyncHandler(async (req, res) => {
+  const uid = req.user.id;
+  const { title, description } = req.body;
 
-    await Note.create({ uid, title, description });
-    return res.status(201).json({
-      success: true,
-      message: "Your note has been created successfully.",
-    });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
-  }
-};
+  await Note.create({ uid, title, description });
+  return res.status(201).json({
+    success: true,
+    message: "Your note has been created successfully.",
+  });
+});
 
-const fetchNotes = async (req, res) => {
-  try {
-    const uid = req.user.id;
-    const note = await Note.find({ uid }).select("title description");
+const fetchNotes = asyncHandler(async (req, res) => {
+  const uid = req.user.id;
+  const note = await Note.find({ uid }).select("title description");
 
+  return res.status(200).json({
+    success: true,
+    note,
+  });
+});
+
+const fetchNote = asyncHandler(async (req, res) => {
+  const uid = req.user.id;
+  const _id = req.params.id;
+
+  const note = await Note.findOne({ _id, uid }).select("title description");
+  return res.status(200).json({
+    success: true,
+    note,
+  });
+});
+
+const updateNote = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const { title, description } = req.body;
+
+  await Note.findByIdAndUpdate(id, { title, description }, { new: true });
+  return res.status(200).json({
+    success: true,
+    message: "Your note has been updated successfully.",
+  });
+});
+
+const deleteNote = asyncHandler(async (req, res) => {
+  const uid = req.user.id;
+  const _id = req.params.id;
+
+  const note = await Note.findOne({ _id, uid });
+  if (note) {
+    await note.deleteOne();
     return res.status(200).json({
       success: true,
-      note,
+      message: "Your note has been deleted successfully.",
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+  } else {
+    throw new CustomError("Note not found.", 400);
   }
-};
-
-const fetchNote = async (req, res) => {
-  try {
-    const uid = req.user.id;
-    const _id = req.params.id;
-
-    const note = await Note.findOne({ _id, uid }).select("title description");
-    return res.status(200).json({
-      success: true,
-      note,
-    });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
-  }
-};
-
-const updateNote = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const { title, description } = req.body;
-
-    await Note.findByIdAndUpdate(id, { title, description }, { new: true });
-    return res.status(200).json({
-      success: true,
-      message: "Your note has been updated successfully.",
-    });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
-  }
-};
-
-const deleteNote = async (req, res) => {
-  try {
-    const uid = req.user.id;
-    const _id = req.params.id;
-
-    const note = await Note.findOne({ _id, uid });
-    if (note) {
-      await note.deleteOne();
-      return res.status(200).json({
-        success: true,
-        message: "Your note has been deleted successfully.",
-      });
-    } else {
-      return res
-        .status(404)
-        .json({ success: false, message: "Note not found." });
-    }
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
+});
 
 export { createNote, fetchNotes, fetchNote, updateNote, deleteNote };
